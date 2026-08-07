@@ -1,5 +1,5 @@
 ## CTF Writeup — "Infinity Pool" Command Injection Boot2Root (TryHackMe)
-### TryHackMe · Hacker Holidays Day 11 (Finale) · Boot2Root · Medium (90 pts) · ping-wrapper RCE → internal pivot → voicemail-leaked token → root-service command injection
+### TryHackMe · Hacker Holidays Day 11 · Boot2Root · Medium (90 pts) · ping-wrapper RCE → internal pivot → voicemail-leaked token → root-service command injection
 
 **User flag:** `THM{REDACTED}`
 **Root flag:** `THM{REDACTED}`
