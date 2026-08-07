@@ -35,6 +35,7 @@ Ordered as they appear in the event.
 | 9 | [CryptoCabana](ctf-cryptocabana-writeup.md) | Cloud / Azure | Over-scoped SAS token, service-principal loot, Key Vault version-history recovery |
 | 10 | [The Hollow Shell](ctf-hollow-shell-writeup.md) | Web | Zip Slip arbitrary write → theme-worker `hooks/*.py` execution → reverse shell |
 | 11 | [Infinity Pool](ctf-infinity-pool-writeup.md) | Boot2Root | Ping-wrapper command injection → internal pivot → voicemail-leaked API token → root-service command injection |
+| 12 | [After Hours](ctf-after-hours-writeup.md) | Forensics / DFIR | WMI CIM-repository carving, event-subscription persistence, `-enc` fileless PowerShell loader, in-memory .NET reflective load |
 
 ---
 
@@ -43,7 +44,8 @@ Ordered as they appear in the event.
 A few ideas recur and are worth carrying between rooms:
 
 - **Credential reuse & leakage** — secrets in HTML comments, on command lines
-  (`ps`), in client-side JS, and in "backup" blobs. Days 2, 3, 5, 9, 10, 11.
+  (`ps`), in client-side JS, in "backup" blobs, and base64-stuffed inside a
+  decoy WMI class property. Days 2, 3, 5, 9, 10, 11, 12.
 - **Authorization without authentication** — a session/identity trusted on
   assertion alone, or a role scoped far wider than the feature needs. Days 1, 3,
   7, 9, 11.
@@ -53,6 +55,9 @@ A few ideas recur and are worth carrying between rooms:
   off-platform; forensics clues live in bytes. Warm-up, Days 4 and 6.
 - **Detection throughline** — every writeup ends with the log signatures and
   anomalies a defender would alert on, not just the offensive steps.
+- **Living-off-the-land persistence** — abusing built-in Windows machinery (WMI
+  event subscriptions, `-enc` PowerShell, in-memory .NET load) instead of
+  dropping a file. Day 12.
   
 
 ---
