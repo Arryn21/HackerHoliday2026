@@ -34,6 +34,7 @@ Ordered as they appear in the event.
 | 8 | [Towel on the Sunbed](ctf-towel-sunbed-writeup.md) | Web / Business Logic | TOCTOU double-spend, request synchronization |
 | 9 | [CryptoCabana](ctf-cryptocabana-writeup.md) | Cloud / Azure | Over-scoped SAS token, service-principal loot, Key Vault version-history recovery |
 | 10 | [The Hollow Shell](ctf-hollow-shell-writeup.md) | Web | Zip Slip arbitrary write → theme-worker `hooks/*.py` execution → reverse shell |
+| 11 | [Infinity Pool](ctf-infinity-pool-writeup.md) | Boot2Root | Ping-wrapper command injection → internal pivot → voicemail-leaked API token → root-service command injection |
 
 ---
 
@@ -42,10 +43,10 @@ Ordered as they appear in the event.
 A few ideas recur and are worth carrying between rooms:
 
 - **Credential reuse & leakage** — secrets in HTML comments, on command lines
-  (`ps`), in client-side JS, and in "backup" blobs. Days 2, 3, 5, 9, 10.
+  (`ps`), in client-side JS, and in "backup" blobs. Days 2, 3, 5, 9, 10, 11.
 - **Authorization without authentication** — a session/identity trusted on
   assertion alone, or a role scoped far wider than the feature needs. Days 1, 3,
-  7, 9.
+  7, 9, 11.
 - **"Deleted"/"rotated" isn't gone** — git history, Key Vault version history, and
   files recoverable off a raw disk. Days 2, 7, 9.
 - **Match technique to category** — OSINT clues live in content and point
