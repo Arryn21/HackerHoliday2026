@@ -2,7 +2,8 @@
 
 Writeups for the **Hacker Holidays** event on TryHackMe — a themed series set in
 the fictional "Byte Lotus" resort, spanning OSINT, web exploitation, cloud
-(AWS **and** Azure), network forensics, and AI/LLM security.
+(AWS **and** Azure), network **and host** forensics, cryptography, and AI/LLM
+security.
 
 Each writeup is written to **teach as well as document**: alongside the exploit
 steps, every command's flags are explained, the underlying vulnerability class is
@@ -36,6 +37,10 @@ Ordered as they appear in the event.
 | 10 | [The Hollow Shell](ctf-hollow-shell-writeup.md) | Web | Zip Slip arbitrary write → theme-worker `hooks/*.py` execution → reverse shell |
 | 11 | [Infinity Pool](ctf-infinity-pool-writeup.md) | Boot2Root | Ping-wrapper command injection → internal pivot → voicemail-leaked API token → root-service command injection |
 | 12 | [After Hours](ctf-after-hours-writeup.md) | Forensics / DFIR | WMI CIM-repository carving, event-subscription persistence, `-enc` fileless PowerShell loader, in-memory .NET reflective load |
+| 13 | [The Guestbook](ctf-guestbook-writeup.md) | AI / LLM Security | Indirect (stored) prompt injection, forged tool/role boundary, manager-gated command execution |
+| 14 | [Management Wants a Word](ctf-management-wants-a-word-writeup.md) | Forensics / Crypto | Offline Windows triage: SAM/LSA login-password recovery, DPAPI-protected Chrome password decryption, VeraCrypt container decryption, FAT carving |
+
+The series ends at **Day 14 — Management Wants a Word**, the finale.
 
 ---
 
@@ -44,11 +49,15 @@ Ordered as they appear in the event.
 A few ideas recur and are worth carrying between rooms:
 
 - **Credential reuse & leakage** — secrets in HTML comments, on command lines
-  (`ps`), in client-side JS, in "backup" blobs, and base64-stuffed inside a
-  decoy WMI class property. Days 2, 3, 5, 9, 10, 11, 12.
+  (`ps`), in client-side JS, in "backup" blobs, base64-stuffed inside a decoy WMI
+  class property, and saved in a browser's own password store. Days 2, 3, 5, 9,
+  10, 11, 12, 14.
 - **Authorization without authentication** — a session/identity trusted on
   assertion alone, or a role scoped far wider than the feature needs. Days 1, 3,
   7, 9, 11.
+- **The secret is in content, not the crypto** — the vault password wasn't
+  cracked, it was *remembered* by the browser and *stored* by the OS; OSINT flags
+  live in content and point off-platform. Warm-up, Days 1, 6, 13, 14.
 - **"Deleted"/"rotated" isn't gone** — git history, Key Vault version history, and
   files recoverable off a raw disk. Days 2, 7, 9.
 - **Match technique to category** — OSINT clues live in content and point
@@ -58,7 +67,12 @@ A few ideas recur and are worth carrying between rooms:
 - **Living-off-the-land persistence** — abusing built-in Windows machinery (WMI
   event subscriptions, `-enc` PowerShell, in-memory .NET load) instead of
   dropping a file. Day 12.
-  
+- **Offline artifact analysis** — a triage image gives up its secrets without a
+  live host: registry hives → login password → DPAPI → browser secrets →
+  encrypted container. Days 12, 14.
+- **Prompt injection, direct and indirect** — Day 1 asserts a privileged
+  identity to the model directly; Day 13 plants a forged boundary in stored
+  content the model later ingests. Days 1, 13.
 
 ---
 
